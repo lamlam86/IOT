@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IoT Pollution Monitor</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+        
+        .header {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+        
+        .header p {
+            opacity: 0.7;
+            font-size: 14px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .alert-banner {
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .alert-banner i {
+            font-size: 40px;
+            margin-bottom: 10px;
+            display: block;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .card-header i {
+            font-size: 24px;
+            margin-right: 10px;
+        }
+        
+        .card-header h3 {
+            font-size: 16px;
+            opacity: 0.8;
+        }
+        
+        .card-value {
+            font-size: 42px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .card-unit {
+            font-size: 14px;
+            opacity: 0.6;
+        }
+        
+        .card-status {
+            margin-top: 10px;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: inline-block;
+        }
+        
+        .status-good { background: #27ae60; }
+        .status-moderate { background: #f39c12; }
+        .status-bad { background: #e74c3c; }
+        
+        .chart-container {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .chart-container h3 {
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .prob-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .prob-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        .prob-card {
+            text-align: center;
+            padding: 15px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.05);
+        }
+        
+        .prob-value {
+            font-size: 28px;
+            font-weight: bold;
+        }
+        
+        .prob-label {
+            font-size: 12px;
+            opacity: 0.7;
+            margin-top: 5px;
+        }
+        
+        .time-display {
+            text-align: center;
+            font-size: 14px;
+            opacity: 0.6;
+            margin-top: 20px;
+        }
+        
+        #mq135-card { border-left: 4px solid #3498db; }
+        #mq7-card { border-left: 4px solid #e74c3c; }
+        #pm25-card { border-left: 4px solid #9b59b6; }
+        #sound-card { border-left: 4px solid #1abc9c; }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+        
+        .alert-danger {
+            animation: pulse 1s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><i class="fas fa-leaf"></i> IoT Pollution Monitor</h1>
+        <p>He thong giam sat o nhiem khong khi va am thanh</p>
+    </div>
+    
+    <div class="container">
+        <!-- Alert Banner -->
+        <div id="alert-banner" class="alert-banner" style="background: #27ae60;">
+            <i class="fas fa-check-circle"></i>
+            <div id="alert-text">DANG CHO DU LIEU...</div>
+        </div>
+        
+        <!-- Sensor Cards -->
+        <div class="grid">
+            <div class="card" id="mq135-card">
+                <div class="card-header">
+                    <i class="fas fa-wind" style="color: #3498db;"></i>
+                    <h3>MQ135 - Chat luong KK</h3>
+                </div>
+                <div class="card-value" id="mq135-value">--</div>
+                <div class="card-unit">ppm</div>
+                <div class="card-status status-good" id="mq135-status">Tot</div>
+            </div>
+            
+            <div class="card" id="mq7-card">
+                <div class="card-header">
+                    <i class="fas fa-smog" style="color: #e74c3c;"></i>
+                    <h3>MQ7 - Carbon Monoxide</h3>
+                </div>
+                <div class="card-value" id="mq7-value">--</div>
+                <div class="card-unit">ppm</div>
+                <div class="card-status status-good" id="mq7-status">An toan</div>
+            </div>
+            
+            <div class="card" id="pm25-card">
+                <div class="card-header">
+                    <i class="fas fa-cloud" style="color: #9b59b6;"></i>
+                    <h3>PM2.5 - Bui min</h3>
+                </div>
+                <div class="card-value" id="pm25-value">--</div>
+                <div class="card-unit">ug/m3</div>
+                <div class="card-status status-good" id="pm25-status">Tot</div>
+            </div>
+            
+            <div class="card" id="sound-card">
+                <div class="card-header">
+                    <i class="fas fa-volume-up" style="color: #1abc9c;"></i>
+                    <h3>Am thanh</h3>
+                </div>
+                <div class="card-value" id="sound-value">--</div>
+                <div class="card-unit">dB</div>
+                <div class="card-status status-good" id="sound-status">Yen tinh</div>
+            </div>
+        </div>
+        
+        <!-- AI Prediction -->
+        <div class="chart-container">
+            <h3><i class="fas fa-brain"></i> AI Prediction</h3>
+            <div class="prob-container">
+                <div class="prob-card" style="border: 2px solid #2ecc71;">
+                    <div class="prob-value" id="prob-very-clean" style="color: #2ecc71;">--%</div>
+                    <div class="prob-label">TRONG LANH</div>
+                </div>
+                <div class="prob-card" style="border: 2px solid #27ae60;">
+                    <div class="prob-value" id="prob-safe" style="color: #27ae60;">--%</div>
+                    <div class="prob-label">AN TOAN</div>
+                </div>
+                <div class="prob-card" style="border: 2px solid #f39c12;">
+                    <div class="prob-value" id="prob-warning" style="color: #f39c12;">--%</div>
+                    <div class="prob-label">CANH BAO</div>
+                </div>
+                <div class="prob-card" style="border: 2px solid #e74c3c;">
+                    <div class="prob-value" id="prob-danger" style="color: #e74c3c;">--%</div>
+                    <div class="prob-label">NGUY HIEM</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Chart -->
+        <div class="chart-container">
+            <h3><i class="fas fa-chart-line"></i> Bieu do theo thoi gian</h3>
+            <canvas id="mainChart" height="100"></canvas>
+        </div>
+        
+        <div class="time-display">
+            Cap nhat luc: <span id="last-update">--</span>
+        </div>
+    </div>
+    
+    <script>
+        // Chart setup
+        const ctx = document.getElementById('mainChart').getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+                    {
+                        label: 'MQ135',
+                        data: [],
+                        borderColor: '#3498db',
+                        tension: 0.4,
+                        fill: false
+                    },
+                    {
+                        label: 'PM2.5',
+                        data: [],
+                        borderColor: '#9b59b6',
+                        tension: 0.4,
+                        fill: false
+                    },
+                    {
+                        label: 'Sound',
+                        data: [],
+                        borderColor: '#1abc9c',
+                        tension: 0.4,
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(255,255,255,0.1)' },
+                        ticks: { color: '#fff' }
+                    },
+                    x: {
+                        grid: { color: 'rgba(255,255,255,0.1)' },
+                        ticks: { color: '#fff' }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: { color: '#fff' }
+                    }
+                }
+            }
+        });
+        
+        function getStatus(type, value) {
+            if (type === 'mq135') {
+                if (value < 100) return { text: 'Tot', class: 'status-good' };
+                if (value < 200) return { text: 'Trung binh', class: 'status-moderate' };
+                return { text: 'Xau', class: 'status-bad' };
+            }
+            if (type === 'mq7') {
+                if (value < 9) return { text: 'An toan', class: 'status-good' };
+                if (value < 35) return { text: 'Canh bao', class: 'status-moderate' };
+                return { text: 'Nguy hiem', class: 'status-bad' };
+            }
+            if (type === 'pm25') {
+                if (value < 35) return { text: 'Tot', class: 'status-good' };
+                if (value < 75) return { text: 'Trung binh', class: 'status-moderate' };
+                return { text: 'Xau', class: 'status-bad' };
+            }
+            if (type === 'sound') {
+                if (value < 55) return { text: 'Yen tinh', class: 'status-good' };
+                if (value < 70) return { text: 'On', class: 'status-moderate' };
+                return { text: 'Rat on', class: 'status-bad' };
+            }
+        }
+        
+        function updateUI(data) {
+            // Update values
+            document.getElementById('mq135-value').textContent = data.mq135.toFixed(1);
+            document.getElementById('mq7-value').textContent = data.mq7.toFixed(2);
+            document.getElementById('pm25-value').textContent = data.pm25.toFixed(1);
+            document.getElementById('sound-value').textContent = data.sound.toFixed(1);
+            
+            // Update status
+            ['mq135', 'mq7', 'pm25', 'sound'].forEach(type => {
+                const status = getStatus(type, data[type]);
+                const el = document.getElementById(type + '-status');
+                el.textContent = status.text;
+                el.className = 'card-status ' + status.class;
+            });
+            
+            // Update alert banner
+            const banner = document.getElementById('alert-banner');
+            const alertText = document.getElementById('alert-text');
+            banner.style.background = data.alert_color;
+            alertText.textContent = data.alert_text;
+            
+            // Update alert banner animation (Level 3 = Danger)
+            if (data.alert_level === 3) {
+                banner.classList.add('alert-danger');
+            } else {
+                banner.classList.remove('alert-danger');
+            }
+            
+            // Update probabilities (4 levels: 0=Very Clean, 1=Safe, 2=Warning, 3=Danger)
+            document.getElementById('prob-very-clean').textContent = (data.prob_very_clean || 0) + '%';
+            document.getElementById('prob-safe').textContent = (data.prob_safe || 0) + '%';
+            document.getElementById('prob-warning').textContent = (data.prob_warning || 0) + '%';
+            document.getElementById('prob-danger').textContent = (data.prob_danger || 0) + '%';
+            
+            // Update time
+            document.getElementById('last-update').textContent = data.datetime;
+            
+            // Update chart
+            if (chart.data.labels.length > 20) {
+                chart.data.labels.shift();
+                chart.data.datasets[0].data.shift();
+                chart.data.datasets[1].data.shift();
+                chart.data.datasets[2].data.shift();
+            }
+            chart.data.labels.push(data.timestamp);
+            chart.data.datasets[0].data.push(data.mq135);
+            chart.data.datasets[1].data.push(data.pm25);
+            chart.data.datasets[2].data.push(data.sound);
+            chart.update();
+        }
+        
+        // Fetch data every 3 seconds
+        function fetchData() {
+            fetch('/api/data')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.mq135 !== undefined) {
+                        updateUI(data);
+                    }
+                })
+                .catch(err => console.error(err));
+        }
+        
+        // Load history on start
+        fetch('/api/history')
+            .then(res => res.json())
+            .then(history => {
+                history.forEach(data => {
+                    if (data.mq135 !== undefined) {
+                        chart.data.labels.push(data.timestamp);
+                        chart.data.datasets[0].data.push(data.mq135);
+                        chart.data.datasets[1].data.push(data.pm25);
+                        chart.data.datasets[2].data.push(data.sound);
+                    }
+                });
+                chart.update();
+                if (history.length > 0) {
+                    updateUI(history[history.length - 1]);
+                }
+            });
+        
+        setInterval(fetchData, 1000);  // Update moi 1 giay (real-time)
+    </script>
+</body>
+</html>
+

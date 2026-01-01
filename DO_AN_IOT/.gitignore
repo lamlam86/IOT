@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# Model files (quá lớn, không commit)
+*.pkl
+*.h5
+*.pb
+*.onnx
+
+# Dataset files (quá lớn - chỉ giữ README)
+datasets/*.csv
+ai_model/*.csv
+
+# CatBoost training info
+catboost_info/
+*.tsv
+
+# Charts (có thể tạo lại)
+charts/*.png
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
