@@ -132,6 +132,10 @@
             font-size: 18px;
         }
         
+        .chart-container canvas {
+            max-height: 400px;
+        }
+        
         .prob-container {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -268,7 +272,9 @@
         <!-- Chart -->
         <div class="chart-container">
             <h3><i class="fas fa-chart-line"></i> Bieu do theo thoi gian</h3>
-            <canvas id="mainChart" height="100"></canvas>
+            <div style="position: relative; height: 400px;">
+                <canvas id="mainChart"></canvas>
+            </div>
         </div>
         
         <div class="time-display">
@@ -277,7 +283,7 @@
     </div>
     
     <script>
-        // Chart setup
+        // Chart setup - Cải thiện để mượt và dễ nhìn hơn
         const ctx = document.getElementById('mainChart').getContext('2d');
         const chart = new Chart(ctx, {
             type: 'line',
@@ -288,41 +294,119 @@
                         label: 'MQ135',
                         data: [],
                         borderColor: '#3498db',
-                        tension: 0.4,
-                        fill: false
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.5,  // Tăng tension để mượt hơn
+                        fill: true,
+                        pointRadius: 0,  // Ẩn điểm để không bị rối
+                        pointHoverRadius: 4,
+                        pointHoverBorderWidth: 2,
+                        pointHoverBackgroundColor: '#3498db',
+                        pointHoverBorderColor: '#fff'
                     },
                     {
                         label: 'PM2.5',
                         data: [],
                         borderColor: '#9b59b6',
-                        tension: 0.4,
-                        fill: false
+                        backgroundColor: 'rgba(155, 89, 182, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.5,
+                        fill: true,
+                        pointRadius: 0,
+                        pointHoverRadius: 4,
+                        pointHoverBorderWidth: 2,
+                        pointHoverBackgroundColor: '#9b59b6',
+                        pointHoverBorderColor: '#fff'
                     },
                     {
                         label: 'Sound',
                         data: [],
                         borderColor: '#1abc9c',
-                        tension: 0.4,
-                        fill: false
+                        backgroundColor: 'rgba(26, 188, 156, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.5,
+                        fill: true,
+                        pointRadius: 0,
+                        pointHoverRadius: 4,
+                        pointHoverBorderWidth: 2,
+                        pointHoverBackgroundColor: '#1abc9c',
+                        pointHoverBorderColor: '#fff'
                     }
                 ]
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: true,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                animation: {
+                    duration: 0  // Tắt animation khi update để tránh giật
+                },
                 scales: {
                     y: {
-                        beginAtZero: true,
-                        grid: { color: 'rgba(255,255,255,0.1)' },
-                        ticks: { color: '#fff' }
+                        beginAtZero: false,  // Không bắt đầu từ 0 để dễ nhìn hơn
+                        grid: { 
+                            color: 'rgba(255,255,255,0.1)',
+                            drawBorder: false
+                        },
+                        ticks: { 
+                            color: '#fff',
+                            font: { size: 11 }
+                        }
                     },
                     x: {
-                        grid: { color: 'rgba(255,255,255,0.1)' },
-                        ticks: { color: '#fff' }
+                        grid: { 
+                            color: 'rgba(255,255,255,0.05)',
+                            drawBorder: false
+                        },
+                        ticks: { 
+                            color: '#fff',
+                            font: { size: 10 },
+                            maxRotation: 0,
+                            autoSkip: true,
+                            maxTicksLimit: 10
+                        }
                     }
                 },
                 plugins: {
                     legend: {
-                        labels: { color: '#fff' }
+                        display: true,
+                        position: 'top',
+                        labels: { 
+                            color: '#fff',
+                            font: { size: 12 },
+                            padding: 15,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                        borderWidth: 1,
+                        padding: 12,
+                        displayColors: true,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                label += context.parsed.y.toFixed(2);
+                                if (context.dataset.label === 'PM2.5') {
+                                    label += ' ug/m³';
+                                } else if (context.dataset.label === 'Sound') {
+                                    label += ' dB';
+                                } else {
+                                    label += ' ppm';
+                                }
+                                return label;
+                            }
+                        }
                     }
                 }
             }
@@ -388,8 +472,9 @@
             // Update time
             document.getElementById('last-update').textContent = data.datetime;
             
-            // Update chart
-            if (chart.data.labels.length > 20) {
+            // Update chart - Cải thiện để mượt hơn
+            const maxDataPoints = 30;  // Tăng số điểm hiển thị lên 30
+            if (chart.data.labels.length >= maxDataPoints) {
                 chart.data.labels.shift();
                 chart.data.datasets[0].data.shift();
                 chart.data.datasets[1].data.shift();
@@ -399,7 +484,9 @@
             chart.data.datasets[0].data.push(data.mq135);
             chart.data.datasets[1].data.push(data.pm25);
             chart.data.datasets[2].data.push(data.sound);
-            chart.update();
+            
+            // Update với mode 'none' để tránh animation giật
+            chart.update('none');
         }
         
         // Fetch data every 3 seconds
@@ -432,7 +519,7 @@
                 }
             });
         
-        setInterval(fetchData, 1000);  // Update moi 1 giay (real-time)
+        setInterval(fetchData, 300);  // Update moi 300ms (real-time)
     </script>
 </body>
 </html>

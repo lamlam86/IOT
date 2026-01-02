@@ -114,39 +114,34 @@ def predict():
             features['PM25_ugm3_rolling_mean'] = pm25
             features['Sound_dB_rolling_mean'] = sound
         
-        # Predict
+        # Predict với AI Model (ưu tiên AI)
         X = pd.DataFrame([features])[FEATURES]
         pred_result = model.predict(X)
         # Flatten nếu là 2D array
         if pred_result.ndim > 1:
             pred_result = pred_result.flatten()
-        prediction = int(pred_result[0])
+        ai_prediction = int(pred_result[0])
         proba_result = model.predict_proba(X)
         probabilities = [float(p) for p in proba_result[0]]  # 4 probabilities cho 4 classes
         
-        # FALLBACK: Neu gia tri cam bien vuot nguong nguy hiem ro rang -> Override AI
-        # Model mới: 0=Very Clean, 1=Safe, 2=Warning, 3=Danger
-        # MQ7 > 35 ppm = Nguy hiem (Level 3)
-        if mq7 > 35:
-            prediction = 3
-            probabilities = [0.0, 0.0, 0.0, 1.0]  # 100% Danger
-        # PM2.5 > 150 ug/m3 = Nguy hiem (Level 3)
-        elif pm25 > 150:
-            prediction = 3
-            probabilities = [0.0, 0.0, 0.0, 1.0]
-        # MQ135 > 200 ppm = Nguy hiem (Level 3)
-        elif mq135 > 200:
+        # FALLBACK: Kiểm tra giá trị cảm biến trước AI (ưu tiên fallback)
+        critical_air = (mq7 > 35 or pm25 > 150 or mq135 > 200)
+        critical_noise = (sound > 85)
+        warning_air = (mq7 > 9 or pm25 > 75 or mq135 > 100)
+        warning_noise = (sound > 65)
+        
+        # Logic: Fallback > AI (đảm bảo đồng bộ)
+        if critical_air or critical_noise:
             prediction = 3
             probabilities = [0.0, 0.0, 0.0, 1.0]
-        # Sound > 85 dB = Nguy hiem (Level 3)
-        elif sound > 85:
-            prediction = 3
-            probabilities = [0.0, 0.0, 0.0, 1.0]
-        # MQ7 > 9 hoac PM2.5 > 75 = Canh bao (Level 2)
-        elif mq7 > 9 or pm25 > 75 or mq135 > 100:
-            if prediction < 2:  # Chi override neu AI bao Very Clean hoac Safe
+        elif warning_air or warning_noise:
+            if ai_prediction < 2:
                 prediction = 2
                 probabilities = [0.0, 0.0, 1.0, 0.0]
+            else:
+                prediction = ai_prediction
+        else:
+            prediction = ai_prediction
         
         alert_info = get_alert_info(prediction)
         

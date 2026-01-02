@@ -72,8 +72,6 @@ void displayLCD(float mq135, float mq7, float pm25, float sound, int alert) {
   lcd.print(" ");
   
   // Hiển thị alert level (rút gọn để vừa màn hình 16 ký tự)
-  String alertText = getAlertText(alert);
-  // Rút gọn: TRONG LANH -> TRONG, AN TOAN -> ANTO, CANH BAO -> CANH, NGUY HIEM -> NGUY
   switch(alert) {
     case 0: lcd.print("TRONG"); break;
     case 1: lcd.print("ANTO"); break;

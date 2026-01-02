@@ -28,10 +28,40 @@ print("=" * 70)
 print("TRAINING AI MODEL FOR POLLUTION PREDICTION")
 print("=" * 70)
 
-# 1. Load data
-print("\n[1] Loading dataset...")
-df = pd.read_csv('datasets/dataset_combined_all.csv')
-print(f"    Loaded {len(df)} samples")
+# 1. Load data - Load tất cả 5 file dataset riêng lẻ rồi combine
+print("\n[1] Loading datasets...")
+dataset_files = [
+    'datasets/dataset_very_clean.csv',
+    'datasets/dataset_safe.csv',
+    'datasets/dataset_air_polluted.csv',
+    'datasets/dataset_noise_polluted.csv',
+    'datasets/dataset_both_polluted.csv'
+]
+
+dataframes = []
+for file_path in dataset_files:
+    if os.path.exists(file_path):
+        df_temp = pd.read_csv(file_path)
+        dataframes.append(df_temp)
+        print(f"    Loaded {file_path}: {len(df_temp)} samples")
+    else:
+        print(f"    [WARNING] File not found: {file_path}")
+
+if not dataframes:
+    print("    [ERROR] No dataset files found! Trying combined file...")
+    if os.path.exists('datasets/dataset_combined_all.csv'):
+        df = pd.read_csv('datasets/dataset_combined_all.csv')
+        print(f"    Loaded combined file: {len(df)} samples")
+    else:
+        raise FileNotFoundError("No dataset files found!")
+else:
+    # Combine tất cả datasets
+    df = pd.concat(dataframes, ignore_index=True)
+    # Shuffle để tránh bias
+    df = df.sample(frac=1, random_state=42).reset_index(drop=True)
+    print(f"\n    Total combined samples: {len(df)}")
+    print(f"    Alert Level distribution:")
+    print(df['Alert_Level'].value_counts().sort_index())
 
 # 2. Feature Engineering
 print("\n[2] Creating features...")
